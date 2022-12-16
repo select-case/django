@@ -1786,9 +1786,11 @@ class RedisCacheTests(BaseCacheTests, TestCase):
     @property
     def incr_decr_type_error(self):
         return self.lib.ResponseError
-    
+
     def test_incr_write_connection(self):
-        with mock.patch("django.core.cache.backends.redis.RedisCacheClient.get_client") as mocked_get_client:
+        with mock.patch(
+            "django.core.cache.backends.redis.RedisCacheClient.get_client"
+        ) as mocked_get_client:
             cache.incr("answer")
             self.assertEqual(mocked_get_client.call_args.kwargs, {"write": True})
 
