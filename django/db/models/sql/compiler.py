@@ -532,15 +532,12 @@ class SQLCompiler:
                         "ORDER BY not allowed in subqueries of compound statements."
                     )
         elif self.query.is_sliced and combinator == "union":
-            limit = (self.query.low_mark, self.query.high_mark)
             for compiler in compilers:
                 # A sliced union cannot have its parts elided as some of them
                 # might be sliced as well and in the event where only a single
                 # part produces a non-empty resultset it might be impossible to
                 # generate valid SQL.
                 compiler.elide_empty = False
-                if not compiler.query.is_sliced:
-                    compiler.query.set_limits(*limit)
         parts = ()
         for compiler in compilers:
             try:
@@ -1277,6 +1274,9 @@ class SQLCompiler:
                 if from_obj:
                     final_field.remote_field.set_cached_value(from_obj, obj)
 
+            def local_setter_noop(obj, from_obj):
+                pass
+
             def remote_setter(name, obj, from_obj):
                 setattr(from_obj, name, obj)
 
@@ -1298,7 +1298,11 @@ class SQLCompiler:
                         "model": model,
                         "field": final_field,
                         "reverse": True,
-                        "local_setter": partial(local_setter, final_field),
+                        "local_setter": (
+                            partial(local_setter, final_field)
+                            if len(joins) <= 2
+                            else local_setter_noop
+                        ),
                         "remote_setter": partial(remote_setter, name),
                         "from_parent": from_parent,
                     }

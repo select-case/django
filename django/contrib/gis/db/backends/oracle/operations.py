@@ -54,7 +54,6 @@ class SDORelate(SpatialOperator):
 
 
 class OracleOperations(BaseSpatialOperations, DatabaseOperations):
-
     name = "oracle"
     oracle = True
     disallowed_aggregates = (models.Collect, models.Extent3D, models.MakeLine)
@@ -121,6 +120,7 @@ class OracleOperations(BaseSpatialOperations, DatabaseOperations):
         "AsKML",
         "AsSVG",
         "Azimuth",
+        "ClosestPoint",
         "ForcePolygonCW",
         "GeoHash",
         "GeometryDistance",

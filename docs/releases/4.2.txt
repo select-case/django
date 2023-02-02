@@ -15,6 +15,11 @@ want to be aware of when upgrading from Django 4.1 or earlier. We've
 See the :doc:`/howto/upgrade-version` guide if you're updating an existing
 project.
 
+Django 4.2 is designated as a :term:`long-term support release
+<Long-term support release>`. It will receive security updates for at least
+three years after its release. Support for the previous LTS, Django 3.2, will
+end in April 2024.
+
 Python compatibility
 ====================
 
@@ -29,7 +34,7 @@ What's new in Django 4.2
 Psycopg 3 support
 -----------------
 
-Django now supports `psycopg`_ version 3.1 or higher. To update your code,
+Django now supports `psycopg`_ version 3.1.8 or higher. To update your code,
 install the `psycopg library`_, you don't need to change the
 :setting:`ENGINE <DATABASE-ENGINE>` as ``django.db.backends.postgresql``
 supports both libraries.
@@ -64,7 +69,7 @@ example::
         question = models.ForeignKey(
             Question,
             on_delete=models.CASCADE,
-            db_comment="Reference to a question"
+            db_comment="Reference to a question",
         )
         answer = models.TextField(db_comment="Question answer")
 
@@ -88,8 +93,19 @@ The Breach (HTB) paper`_.
 In-memory file storage
 ----------------------
 
-The new ``django.core.files.storage.InMemoryStorage`` class provides a
+The new :class:`django.core.files.storage.InMemoryStorage` class provides a
 non-persistent storage useful for speeding up tests by avoiding disk access.
+
+Custom file storages
+--------------------
+
+The new :setting:`STORAGES` setting allows configuring multiple custom file
+storage backends. It also controls storage engines for managing
+:doc:`files </topics/files>` (the ``"default"`` key) and :doc:`static files
+</ref/contrib/staticfiles>` (the ``"staticfiles"`` key).
+
+The old ``DEFAULT_FILE_STORAGE`` and ``STATICFILES_STORAGE`` settings are
+deprecated as of this release.
 
 Minor features
 --------------
@@ -121,11 +137,6 @@ Minor features
 
 * jQuery is upgraded from version 3.6.0 to 3.6.3.
 
-:mod:`django.contrib.admindocs`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
-
 :mod:`django.contrib.auth`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -137,11 +148,6 @@ Minor features
 
 * The new :class:`~django.contrib.auth.forms.BaseUserCreationForm` is now the
   recommended base class for customizing the user creation form.
-
-:mod:`django.contrib.contenttypes`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
 
 :mod:`django.contrib.gis`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -172,11 +178,6 @@ Minor features
   functions allow creating geometries from Well-known binary (WKB) and
   Well-known text (WKT) representations.
 
-:mod:`django.contrib.messages`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
-
 :mod:`django.contrib.postgres`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -190,26 +191,11 @@ Minor features
 * The :lookup:`arrayfield.overlap` lookup now supports ``QuerySet.values()``
   and ``values_list()`` as a right-hand side.
 
-:mod:`django.contrib.redirects`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
-
-:mod:`django.contrib.sessions`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
-
 :mod:`django.contrib.sitemaps`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * The new :meth:`.Sitemap.get_languages_for_item` method allows customizing the
   list of languages for which the item is displayed.
-
-:mod:`django.contrib.sites`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
 
 :mod:`django.contrib.staticfiles`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -222,36 +208,15 @@ Minor features
   a hash over all files in the manifest and changes whenever one of the files
   changes.
 
-:mod:`django.contrib.syndication`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ...
-
-Cache
-~~~~~
-
-* ...
-
-CSRF
-~~~~
-
-* ...
-
 Database backends
 ~~~~~~~~~~~~~~~~~
 
 * The new ``"assume_role"`` option is now supported in :setting:`OPTIONS` on
   PostgreSQL to allow specifying the :ref:`session role <database-role>`.
 
-Decorators
-~~~~~~~~~~
-
-* ...
-
-Email
-~~~~~
-
-* ...
+* The new ``"server_side_binding"`` option is now supported in
+  :setting:`OPTIONS` on PostgreSQL with ``psycopg`` 3.1.8+ to allow using
+  :ref:`server-side binding cursors <database-server-side-parameters-binding>`.
 
 Error Reporting
 ~~~~~~~~~~~~~~~
@@ -259,15 +224,8 @@ Error Reporting
 * The debug page now shows :pep:`exception notes <678>` and
   :pep:`fine-grained error locations <657>` on Python 3.11+.
 
-File Storage
-~~~~~~~~~~~~
-
-* ...
-
-File Uploads
-~~~~~~~~~~~~
-
-* ...
+* Session cookies are now treated as credentials and therefore hidden and
+  replaced with stars (``**********``) in error reports.
 
 Forms
 ~~~~~
@@ -277,14 +235,6 @@ Forms
 
 * :func:`~django.forms.models.modelform_factory` now respects the
   ``formfield_callback`` attribute of the ``form``’s ``Meta``.
-
-* Session cookies are now treated as credentials and therefore hidden and
-  replaced with stars (``**********``) in error reports.
-
-Generic Views
-~~~~~~~~~~~~~
-
-* ...
 
 Internationalization
 ~~~~~~~~~~~~~~~~~~~~
@@ -361,26 +311,6 @@ Requests and Responses
 * :class:`~django.http.StreamingHttpResponse` now supports async iterators
   when Django is served via ASGI.
 
-Security
-~~~~~~~~
-
-* ...
-
-Serialization
-~~~~~~~~~~~~~
-
-* ...
-
-Signals
-~~~~~~~
-
-* ...
-
-Templates
-~~~~~~~~~
-
-* ...
-
 Tests
 ~~~~~
 
@@ -402,11 +332,6 @@ Tests
      # After:
      self.client.get("/home/", headers={"accept-language": "fr"})
      await self.async_client.get("/home/", headers={"accept-language": "fr"})
-
-URLs
-~~~~
-
-* ...
 
 Utilities
 ~~~~~~~~~
@@ -532,11 +457,13 @@ Miscellaneous
 * The minimum supported version of `redis-py`_ is increased from 3.0.0 to
   3.4.0.
 
-.. _`redis-py`: https://pypi.org/project/redis/
-
 * Manually instantiated ``WSGIRequest`` objects must be provided a file-like
   object for ``wsgi.input``. Previously, Django was more lax than the expected
   behavior as specified by the WSGI specification.
+
+* Support for ``PROJ`` < 5 is removed.
+
+.. _`redis-py`: https://pypi.org/project/redis/
 
 .. _deprecated-features-4.2:
 
@@ -583,7 +510,7 @@ but it should not be used for new migrations. Use
 Passing encoded JSON string literals to ``JSONField`` is deprecated
 -------------------------------------------------------------------
 
-``JSONField`` and its associated lookups and aggregates use to allow passing
+``JSONField`` and its associated lookups and aggregates used to allow passing
 JSON encoded string literals which caused ambiguity on whether string literals
 were already encoded from database backend's perspective.
 
@@ -668,3 +595,11 @@ Miscellaneous
 
 * Passing positional arguments to ``Signer`` and ``TimestampSigner`` is
   deprecated in favor of keyword-only arguments.
+
+* The ``DEFAULT_FILE_STORAGE`` setting is deprecated in favor of
+  ``STORAGES["default"]``.
+
+* The ``STATICFILES_STORAGE`` setting is deprecated in favor of
+  ``STORAGES["staticfiles"]``.
+
+* The ``django.core.files.storage.get_storage_class()`` function is deprecated.

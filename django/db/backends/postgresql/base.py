@@ -1,7 +1,7 @@
 """
 PostgreSQL database backend for Django.
 
-Requires psycopg2 >= 2.8.4 or psycopg >= 3.1
+Requires psycopg2 >= 2.8.4 or psycopg >= 3.1.8
 """
 
 import asyncio
@@ -38,9 +38,9 @@ if psycopg_version() < (2, 8, 4):
     raise ImproperlyConfigured(
         f"psycopg2 version 2.8.4 or newer is required; you have {Database.__version__}"
     )
-if (3,) <= psycopg_version() < (3, 1):
+if (3,) <= psycopg_version() < (3, 1, 8):
     raise ImproperlyConfigured(
-        f"psycopg version 3.1 or newer is required; you have {Database.__version__}"
+        f"psycopg version 3.1.8 or newer is required; you have {Database.__version__}"
     )
 
 
@@ -223,6 +223,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         conn_params.pop("assume_role", None)
         conn_params.pop("isolation_level", None)
+        conn_params.pop("server_side_binding", None)
         if settings_dict["USER"]:
             conn_params["user"] = settings_dict["USER"]
         if settings_dict["PASSWORD"]:
@@ -268,14 +269,20 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         connection = self.Database.connect(**conn_params)
         if set_isolation_level:
             connection.isolation_level = self.isolation_level
-        if not is_psycopg3:
+        if is_psycopg3:
+            connection.cursor_factory = (
+                ServerBindingCursor
+                if options.get("server_side_binding") is True
+                else Cursor
+            )
+        else:
             # Register dummy loads() to avoid a round trip from psycopg2's
             # decode to json.dumps() to json.loads(), when using a custom
             # decoder in JSONField.
             psycopg2.extras.register_default_jsonb(
                 conn_or_curs=connection, loads=lambda x: x
             )
-        connection.cursor_factory = Cursor
+            connection.cursor_factory = Cursor
         return connection
 
     def ensure_timezone(self):
@@ -436,7 +443,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
 if is_psycopg3:
 
-    class Cursor(Database.Cursor):
+    class CursorMixin:
         """
         A subclass of psycopg cursor implementing callproc.
         """
@@ -457,13 +464,18 @@ if is_psycopg3:
             self.execute(stmt)
             return args
 
+    class ServerBindingCursor(CursorMixin, Database.Cursor):
+        pass
+
+    class Cursor(CursorMixin, Database.ClientCursor):
+        pass
+
     class CursorDebugWrapper(BaseCursorDebugWrapper):
         def copy(self, statement):
             with self.debug_sql(statement):
                 return self.cursor.copy(statement)
 
 else:
-
     Cursor = psycopg2.extensions.cursor
 
     class CursorDebugWrapper(BaseCursorDebugWrapper):
